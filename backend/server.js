@@ -48,11 +48,15 @@ app.use(
 );
 
 // Security headers (run `npm install helmet`; skipped quietly if missing)
-try {
-  app.use(require('helmet')({ crossOriginResourcePolicy: { policy: 'cross-site' } }));
-} catch (e) {
-  console.warn('helmet is not installed — run: npm install helmet');
-}
+const helmet = require('helmet');
+
+app.use(
+  helmet({
+    crossOriginResourcePolicy: {
+      policy: 'cross-origin'
+    }
+  })
+);
 
 // Extra CSRF guard: a browser always sends Origin on cross-site writes.
 // Reject state-changing requests that come from an origin we don't trust.
