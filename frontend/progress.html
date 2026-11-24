@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>HERFORM — Progress</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/variables.css" />
+<link rel="stylesheet" href="css/components.css" />
+<link rel="stylesheet" href="css/ui.css" />
+<script src="js/theme.js"></script>
+<script src="js/ui.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="top-bar"><div class="greeting" style="font-size:1.3rem;">Your Progress</div></div>
+    <div class="page" style="padding-top:0;" id="content"><div class="loading-spinner"></div></div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth-guard.js"></script>
+  <script src="js/bottom-nav.js"></script>
+  <script>
+    (async function init() {
+      const user = await requireUserAuth();
+      if (!user) return;
+
+      const content = document.getElementById('content');
+      try {
+        const summary = await api.getProgressSummary();
+
+        const calendarCells = Array.from({ length: 84 }, (_, i) => {
+          const day = i + 1;
+          const entry = summary.calendar.find((c) => c.day === day);
+          return `<div class="calendar-cell ${entry && entry.completed ? 'done' : ''}">${day}</div>`;
+        }).join('');
+
+        content.innerHTML = `
+          <div class="card">
+            <div class="stat-grid">
+              <div class="stat-chip">
+                <div class="stat-value">${summary.totalCompletedWorkouts}</div>
+                <div class="stat-label">Total Workouts</div>
+              </div>
+              <div class="stat-chip">
+                <div class="stat-value">${summary.programProgress}%</div>
+                <div class="stat-label">Programme Progress</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Weekly Consistency</div>
+            <div class="exercise-meta">${summary.weeklyCompletedCount} workouts completed this week</div>
+            <div class="progress-bar-track" style="margin-top:10px;">
+              <div class="progress-bar-fill" style="width:${Math.min(100, (summary.weeklyCompletedCount / 6) * 100)}%;"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Activity Calendar</div>
+            <div class="calendar-grid" style="margin-top:10px;">${calendarCells}</div>
+          </div>
+        `;
+
+        renderBottomNav('progress');
+      } catch (err) {
+        content.innerHTML = `<div class="error-state">Could not load progress. ${err.message}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

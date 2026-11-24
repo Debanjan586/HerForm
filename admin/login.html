@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>HERFORM Admin — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/variables.css" />
+<link rel="stylesheet" href="css/admin.css" />
+<link rel="stylesheet" href="css/ui.css" />
+<script src="js/theme.js"></script>
+<script src="js/ui.js"></script>
+<style>
+  body { min-width: auto; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .login-box { width: 380px; }
+  .login-brand { text-align: center; margin-bottom: 26px; }
+  .login-brand .mark { font-family: var(--font-display); font-size: 1.8rem; }
+  .login-brand .sub { font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+  .panel { padding: 30px; }
+  .error-box { background: var(--color-error-bg); color: var(--color-error); padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 16px; display: none; }
+  .error-box.show { display: block; }
+</style>
+</head>
+<body>
+  <div class="login-box">
+    <div class="login-brand">
+      <div class="mark">herform</div>
+      <div class="sub">Admin Console</div>
+    </div>
+    <div class="panel">
+      <div class="error-box" id="errorBox"></div>
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" id="email" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" id="password" required />
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" id="loginBtn">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/login-lock.js"></script>
+  <script>
+    const lock = loginLock.create('herform_admin_login_lock');
+    api.me().then(({ user }) => { if (user.role === 'admin') ui.go('overview.html'); }).catch(() => {});
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorBox = document.getElementById('errorBox');
+      const btn = document.getElementById('loginBtn');
+      errorBox.classList.remove('show');
+      btn.disabled = true; btn.textContent = 'Signing in...';
+      try {
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const { user } = await api.login(email, password);
+        if (user.role !== 'admin') throw new Error('This login is for administrators only.');
+        ui.go('overview.html');
+      } catch (err) {
+        if (err.status === 429) lock.engage(err.retryAfterSeconds || 900);
+        errorBox.textContent = err.message;
+        errorBox.classList.add('show');
+        btn.disabled = false; btn.textContent = 'Sign In';
+      }
+    });
+  </script>
+</body>
+</html>

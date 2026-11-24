@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>HERFORM Admin — Overview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/variables.css" />
+<link rel="stylesheet" href="css/admin.css" />
+<link rel="stylesheet" href="css/ui.css" />
+<script src="js/theme.js"></script>
+<script src="js/ui.js"></script>
+</head>
+<body>
+  <div class="admin-shell">
+    <div class="main-content">
+      <div class="page-header">
+        <h1>Overview</h1>
+        <p>A snapshot of programme-wide activity and engagement.</p>
+      </div>
+      <div id="content"><div class="loading-spinner"></div></div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth-guard.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    (async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+      renderSidebar('overview');
+
+      const content = document.getElementById('content');
+      try {
+        const data = await api.getOverview();
+
+        content.innerHTML = `
+          <div class="grid-4">
+            <div class="stat-card">
+              <div class="label">Total Users</div>
+              <div class="value">${data.totalUsers}</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Workout Sessions</div>
+              <div class="value">${data.totalSessions}</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Completed Workouts</div>
+              <div class="value">${data.completedWorkouts}</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Completion Rate</div>
+              <div class="value">${data.completionRate}%</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">Recent Activity</div>
+            ${
+              data.recentActivity.length === 0
+                ? '<div class="empty-state">No completed workouts yet.</div>'
+                : `<table>
+                    <thead><tr><th>User</th><th>Workout</th><th>Week / Day</th><th>Completed At</th></tr></thead>
+                    <tbody>
+                      ${data.recentActivity
+                        .map(
+                          (s) => `
+                        <tr>
+                          <td>${s.user ? s.user.name : '—'}</td>
+                          <td>${s.workout ? s.workout.title : '—'}</td>
+                          <td>Week ${s.workout?.week || '—'} / Day ${s.workout?.day || '—'}</td>
+                          <td>${new Date(s.completedAt).toLocaleString()}</td>
+                        </tr>`
+                        )
+                        .join('')}
+                    </tbody>
+                  </table>`
+            }
+          </div>
+        `;
+      } catch (err) {
+        content.innerHTML = `<div class="empty-state">Could not load overview. ${err.message}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

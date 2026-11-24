@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>HERFORM Admin — Day Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/variables.css" />
+<link rel="stylesheet" href="css/admin.css" />
+<link rel="stylesheet" href="css/ui.css" />
+<script src="js/theme.js"></script>
+<script src="js/ui.js"></script>
+<style>
+  .day-select-bar { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+  .day-select-bar select { max-width: 300px; }
+  .card-image-row { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 20px; }
+  .card-image-preview { width: 220px; aspect-ratio: 16/10; border-radius: var(--radius-md); object-fit: cover; background: var(--color-surface-alt); }
+  .exercise-row { border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 10px; display:flex; align-items:center; gap: 14px; transition: box-shadow 200ms var(--ease-smooth); }
+  .exercise-row:hover { box-shadow: var(--shadow-soft); }
+  .exercise-row img { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; background: var(--color-surface-alt); flex-shrink:0; }
+  .exercise-row-info { flex: 1; min-width: 0; }
+  .exercise-row-title { font-weight: 700; }
+  .exercise-row-meta { font-size: 0.8rem; color: var(--color-text-muted); }
+  .row-actions { display: flex; gap: 6px; align-items: center; }
+  .icon-btn { width: 30px; height: 30px; border-radius: 8px; background: var(--color-surface-alt); color: var(--color-text); border: 1px solid var(--color-border); font-size: 0.9rem; transition: background 160ms var(--ease-smooth), opacity 160ms; }
+  .icon-btn:hover:not(:disabled) { background: var(--color-border); }
+  .icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .sel-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; font-size:0.85rem; color:var(--color-text-muted); }
+  .sel-bar label { display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:600; color:var(--color-text); }
+  .sel-bar input, .row-check { width:17px; height:17px; accent-color: var(--color-accent-dark); flex-shrink:0; cursor:pointer; }
+  .exercise-row.checked { border-color: var(--color-accent-dark); background: var(--color-surface-alt); }
+  .badge-timed { background: rgba(var(--color-warning-rgb), 0.18); color: var(--color-warning); }
+
+  .picker-cat { display:flex; align-items:center; justify-content:space-between; gap:10px; margin: 16px 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--color-border); }
+  .picker-cat:first-child { margin-top: 0; }
+  .picker-cat-name { font-weight: 700; }
+  .picker-cat-name small { font-weight: 500; color: var(--color-text-muted); margin-left: 6px; }
+  .picker-item { display:flex; align-items:center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-sm); cursor:pointer; transition: background 160ms var(--ease-smooth); }
+  .picker-item:hover { background: var(--color-surface-alt); }
+  .picker-item.on-day { opacity: 0.45; cursor: default; }
+  .picker-item input { width: 17px; height: 17px; accent-color: var(--color-accent-dark); flex-shrink: 0; }
+  .picker-item img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; background: var(--color-surface-alt); }
+  .picker-footer { display:flex; gap:10px; margin-top: 16px; align-items:center; }
+
+  .set-timing-list { display: grid; gap: 8px; margin-bottom: 8px; }
+  .set-timing-row { display:flex; align-items:center; gap: 10px; }
+  .set-timing-row label { width: 56px; font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); }
+  .set-timing-row input { max-width: 120px; }
+  .set-timing-row span { font-size: 0.8rem; color: var(--color-text-muted); }
+
+  .copy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 6px; max-height: 280px; overflow-y: auto; margin: 10px 0; }
+  .copy-cell { padding: 8px 0; text-align:center; border-radius: 8px; font-size: 0.8rem; font-weight: 600; border: 1.5px solid var(--color-border); background: var(--color-surface); color: var(--color-text-muted); cursor: pointer; transition: background 160ms var(--ease-smooth), color 160ms, border-color 160ms; }
+  .copy-cell:hover { border-color: var(--color-accent); }
+  .copy-cell.sel { background: var(--color-accent-dark); border-color: var(--color-accent-dark); color: var(--color-on-dark); }
+  .copy-cell.src { opacity: 0.3; cursor: not-allowed; }
+  .copy-quick { display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 4px; }
+  .mode-row { display:flex; gap:16px; margin: 10px 0 4px; font-size: 0.88rem; }
+  .mode-row label { display:flex; gap:6px; align-items:center; cursor:pointer; }
+</style>
+</head>
+<body>
+  <div class="admin-shell">
+    <div class="main-content">
+      <div class="page-header">
+        <h1>Day Builder</h1>
+        <p>Build all 84 days. Every exercise from your library is available here: add one, add a whole category, then customise sets, reps and timing for that day.</p>
+      </div>
+
+      <div class="day-select-bar">
+        <button class="btn btn-outline btn-sm" id="prevDayBtn">&larr; Prev</button>
+        <select class="form-select" id="daySelect"></select>
+        <button class="btn btn-outline btn-sm" id="nextDayBtn">Next &rarr;</button>
+        <label class="toggle-pill" id="enableToggle" onclick="toggleCurrentWorkout()">—</label>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Day Info</div>
+        <div class="card-image-row" style="margin-bottom:0;">
+          <div style="flex:1;">
+            <div class="form-group">
+              <label class="form-label">Day Title / Subject (e.g. "Leg Day")</label>
+              <input class="form-input" id="dayTitle" />
+            </div>
+            <div class="checkbox-row" style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+              <input type="checkbox" id="dayIsRest" />
+              <label for="dayIsRest">This is a rest day</label>
+            </div>
+            <button class="btn btn-primary btn-sm" id="saveDayInfoBtn">Save Day Info</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <span>Exercises for This Day</span>
+          <span style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm" id="copyDayBtn">Copy this day to…</button>
+            <button class="btn btn-primary btn-sm" id="addExerciseToDayBtn">+ Add from Library</button>
+          </span>
+        </div>
+        <div class="sel-bar" id="selBar" style="display:none;"><label><input type="checkbox" id="selAll" /> Select all</label><span id="selCount"></span><button class="btn btn-danger btn-sm" id="delSelBtn" style="display:none;">Delete selected</button></div>
+        <div id="dayExerciseList"><div class="loading-spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Library picker modal -->
+  <div class="modal-overlay" id="pickerOverlay">
+    <div class="modal-box">
+      <h3 style="margin-bottom:4px;">Add from Library</h3>
+      <p style="font-size:0.82rem; color:var(--color-text-muted); margin-bottom:14px;">Tick exercises, or use "Add whole category". You can customise each one afterwards.</p>
+      <div id="pickerList"></div>
+      <div class="picker-footer">
+        <button type="button" class="btn btn-primary" id="addSelectedBtn" disabled>Add selected</button>
+        <button type="button" class="btn btn-outline" id="cancelPickerBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timing edit modal -->
+  <div class="modal-overlay" id="timingOverlay">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px;" id="timingModalTitle">Set Timing</h3>
+      <form id="timingForm">
+        <input type="hidden" id="timingEntryId" />
+        <div class="form-group">
+          <label class="form-label">Sets</label>
+          <input type="number" class="form-input" id="timingSets" min="1" max="20" required />
+        </div>
+
+        <!-- reps-based -->
+        <div id="repFields">
+          <div class="form-group">
+            <label class="form-label">Reps (label)</label>
+            <input class="form-input" id="timingReps" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Work Seconds (per set)</label>
+            <input type="number" class="form-input" id="timingWorkSeconds" min="1" />
+          </div>
+        </div>
+
+        <!-- timed hold: one time per set -->
+        <div id="holdFields" style="display:none;">
+          <label class="form-label">Hold time for each set (seconds)</label>
+          <div class="set-timing-list" id="setTimingList"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Rest Seconds (between sets)</label>
+          <input type="number" class="form-input" id="timingRestSeconds" min="0" required />
+        </div>
+        <div style="display:flex; gap:10px; margin-top:16px;">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-outline" id="cancelTimingBtn">Cancel</button>
+          <button type="button" class="btn btn-danger" id="removeFromDayBtn" style="margin-left:auto;">Remove</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Copy day modal -->
+  <div class="modal-overlay" id="copyOverlay">
+    <div class="modal-box">
+      <h3 style="margin-bottom:4px;" id="copyTitle">Copy day</h3>
+      <p style="font-size:0.82rem; color:var(--color-text-muted);">Pick the days that should get the same exercises (with the same sets and timings).</p>
+      <div class="copy-quick">
+        <button type="button" class="btn btn-outline btn-sm" id="copyWeekBtn">Rest of this week</button>
+        <button type="button" class="btn btn-outline btn-sm" id="copyAllBtn">All days</button>
+        <button type="button" class="btn btn-outline btn-sm" id="copyNoneBtn">Clear</button>
+      </div>
+      <div class="copy-grid" id="copyGrid"></div>
+      <div class="mode-row">
+        <label><input type="radio" name="copyMode" value="replace" checked /> Replace their exercises</label>
+        <label><input type="radio" name="copyMode" value="append" /> Add to their exercises</label>
+      </div>
+      <div class="picker-footer">
+        <button type="button" class="btn btn-primary" id="copyGoBtn">Copy</button>
+        <button type="button" class="btn btn-outline" id="copyCancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth-guard.js"></script>
+  <script src="js/sidebar.js"></script>
+    <script>
+    let allWorkouts = [];
+    let currentWorkout = null;
+    let library = [];
+    const checkedEntries = new Set();
+    const picked = new Set();
+    const copyTargets = new Set();
+
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+    const $ = (id) => document.getElementById(id);
+
+    (async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+      renderSidebar('daybuilder');
+
+      try {
+        const [{ workouts }, { exercises }] = await Promise.all([api.getWorkouts(), api.getExerciseLibrary()]);
+        allWorkouts = workouts.sort((a, b) => a.day - b.day);
+        library = exercises;
+        buildDaySelect();
+        $('daySelect').addEventListener('change', () => loadDay($('daySelect').value));
+        $('prevDayBtn').addEventListener('click', () => stepDay(-1));
+        $('nextDayBtn').addEventListener('click', () => stepDay(1));
+        loadDay(allWorkouts[0].day);
+      } catch (err) {
+        $('dayExerciseList').innerHTML = `<div class="empty-state">Could not load. ${esc(err.message)}</div>`;
+      }
+    })();
+
+    function dayLabel(w) {
+      const n = w.isRestDay ? 'rest' : `${w.exercises.length} ex`;
+      return `Day ${w.day} · ${w.title || 'Untitled'} (${n})`;
+    }
+
+    function buildDaySelect() {
+      const sel = $('daySelect');
+      const keep = currentWorkout ? currentWorkout.day : null;
+      const byWeek = new Map();
+      allWorkouts.forEach((w) => {
+        if (!byWeek.has(w.week)) byWeek.set(w.week, []);
+        byWeek.get(w.week).push(w);
+      });
+      sel.innerHTML = [...byWeek.entries()]
+        .map(([wk, list]) => `<optgroup label="Week ${wk}">${list.map((w) => `<option value="${w.day}">${esc(dayLabel(w))}</option>`).join('')}</optgroup>`)
+        .join('');
+      if (keep != null) sel.value = keep;
+    }
+
+    function stepDay(delta) {
+      const i = allWorkouts.findIndex((w) => w.day === currentWorkout.day) + delta;
+      if (i < 0 || i >= allWorkouts.length) return;
+      loadDay(allWorkouts[i].day);
+    }
+
+    function loadDay(day) {
+      currentWorkout = allWorkouts.find((w) => w.day == day);
+      $('daySelect').value = currentWorkout.day;
+      checkedEntries.clear();
+      const i = allWorkouts.indexOf(currentWorkout);
+      $('prevDayBtn').disabled = i === 0;
+      $('nextDayBtn').disabled = i === allWorkouts.length - 1;
+      renderDay();
+    }
+
+    function replaceWorkout(workout) {
+      const idx = allWorkouts.findIndex((w) => w.day === workout.day);
+      allWorkouts[idx] = workout;
+      currentWorkout = workout;
+      buildDaySelect();
+    }
+
+    function metaFor(entry) {
+      const ex = entry.exercise;
+      if (ex.isTimedHold) {
+        const t = entry.setTimings && entry.setTimings.length ? entry.setTimings : Array(entry.sets).fill(entry.workSeconds);
+        return `${entry.sets} ${entry.sets === 1 ? 'set' : 'sets'} · hold ${t.map((x) => x + 's').join(' / ')} · rest ${entry.restSeconds}s`;
+      }
+      return `${entry.sets} sets × ${entry.workSeconds}s work / ${entry.restSeconds}s rest ${entry.reps ? `· ${esc(entry.reps)} reps` : ''}`;
+    }
+
+    function renderDay() {
+      const w = currentWorkout;
+      $('dayTitle').value = w.title;
+      $('dayIsRest').checked = w.isRestDay;
+
+      const toggle = $('enableToggle');
+      toggle.textContent = w.enabled ? 'Enabled' : 'Disabled';
+      toggle.className = `toggle-pill ${w.enabled ? 'on' : 'off'}`;
+
+      const list = $('dayExerciseList');
+      const live = new Set(w.exercises.map((e) => e._id));
+      [...checkedEntries].forEach((id) => { if (!live.has(id)) checkedEntries.delete(id); });
+      $('selBar').style.display = w.exercises.length ? 'flex' : 'none';
+      if (w.exercises.length === 0) {
+        list.innerHTML = `<div class="empty-state">No exercises yet. Use "Add from Library" to add some, or "Copy this day to…" from another day.</div>`;
+        return;
+      }
+      const n = w.exercises.length;
+      list.innerHTML = w.exercises
+        .map((entry, i) => {
+          const ex = entry.exercise;
+          return `
+          <div class="exercise-row ${checkedEntries.has(entry._id) ? 'checked' : ''}">
+            <input type="checkbox" class="row-check" data-id="${entry._id}" ${checkedEntries.has(entry._id) ? 'checked' : ''} />
+            <img src="${esc(ex.imageUrl || '')}" alt="${esc(ex.name)}" />
+            <div class="exercise-row-info">
+              <div class="exercise-row-title">${esc(ex.name)} ${ex.isTimedHold ? '<span class="badge badge-timed">Timed</span>' : ''}</div>
+              <div class="exercise-row-meta">${metaFor(entry)}</div>
+            </div>
+            <div class="row-actions">
+              <button class="icon-btn" title="Move up" ${i === 0 ? 'disabled' : ''} onclick="moveEntry('${entry._id}', -1)">&uarr;</button>
+              <button class="icon-btn" title="Move down" ${i === n - 1 ? 'disabled' : ''} onclick="moveEntry('${entry._id}', 1)">&darr;</button>
+              <button class="btn btn-outline btn-sm" onclick="openTimingModal('${entry._id}')">Customise</button>
+            </div>
+          </div>`;
+        })
+        .join('');
+      list.querySelectorAll('.row-check').forEach((cb) =>
+        cb.addEventListener('change', () => {
+          cb.checked ? checkedEntries.add(cb.dataset.id) : checkedEntries.delete(cb.dataset.id);
+          cb.closest('.exercise-row').classList.toggle('checked', cb.checked);
+          updateSelBar();
+        })
+      );
+      updateSelBar();
+    }
+
+    function updateSelBar() {
+      const n = checkedEntries.size, total = currentWorkout.exercises.length;
+      $('selAll').checked = total > 0 && n === total;
+      $('selAll').indeterminate = n > 0 && n < total;
+      $('selCount').textContent = n ? `${n} selected` : '';
+      $('delSelBtn').style.display = n ? '' : 'none';
+    }
+
+    $('selAll').addEventListener('change', () => {
+      checkedEntries.clear();
+      if ($('selAll').checked) currentWorkout.exercises.forEach((e) => checkedEntries.add(e._id));
+      renderDay();
+    });
+
+    $('delSelBtn').addEventListener('click', async () => {
+      const ids = [...checkedEntries];
+      if (!ids.length) return;
+      const ok = await ui.confirm({ title: `Remove ${ids.length} exercise${ids.length === 1 ? '' : 's'}?`, message: 'They will be taken out of this day. The library is not affected.', confirmText: 'Remove', tone: 'danger' });
+      if (!ok) return;
+      try {
+        for (const id of ids) await api.removeExerciseFromDay(currentWorkout._id, id); // one at a time: same document
+        currentWorkout.exercises = currentWorkout.exercises.filter((e) => !checkedEntries.has(e._id));
+        checkedEntries.clear();
+        buildDaySelect();
+        renderDay();
+      } catch (err) {
+        ui.alert(err.message);
+        const { workout } = await api.getWorkoutByDay(currentWorkout.day);
+        checkedEntries.clear();
+        replaceWorkout(workout);
+        renderDay();
+      }
+    });
+
+    async function moveEntry(entryId, delta) {
+      const ids = currentWorkout.exercises.map((e) => e._id);
+      const i = ids.indexOf(entryId);
+      const j = i + delta;
+      if (j < 0 || j >= ids.length) return;
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+      try {
+        await api.reorderDayExercises(currentWorkout._id, ids);
+        const byId = Object.fromEntries(currentWorkout.exercises.map((e) => [e._id, e]));
+        currentWorkout.exercises = ids.map((id) => byId[id]);
+        renderDay();
+      } catch (err) {
+        ui.alert(err.message);
+      }
+    }
+
+    async function toggleCurrentWorkout() {
+      try {
+        const { workout } = await api.toggleWorkout(currentWorkout._id);
+        currentWorkout.enabled = workout.enabled;
+        renderDay();
+      } catch (err) {
+        ui.alert(err.message);
+      }
+    }
+
+    $('saveDayInfoBtn').addEventListener('click', async () => {
+      try {
+        const payload = {
+          week: currentWorkout.week,
+          day: currentWorkout.day,
+          dayOfWeek: currentWorkout.dayOfWeek,
+          title: $('dayTitle').value,
+          isRestDay: $('dayIsRest').checked,
+          enabled: currentWorkout.enabled
+        };
+        const { workout } = await api.saveWorkoutInfo(payload);
+        const idx = allWorkouts.findIndex((w) => w.day === workout.day);
+        allWorkouts[idx] = { ...allWorkouts[idx], ...workout };
+        currentWorkout = allWorkouts[idx];
+        buildDaySelect();
+        const btn = $('saveDayInfoBtn');
+        const original = btn.textContent;
+        btn.textContent = 'Saved ✓';
+        setTimeout(() => (btn.textContent = original), 1500);
+      } catch (err) {
+        ui.alert(err.message);
+      }
+    });
+
+    // ---- Library picker (grouped by category) ----
+    function onDayIds() {
+      return new Set(currentWorkout.exercises.map((e) => String(e.exercise._id || e.exercise)));
+    }
+
+    function renderPicker() {
+      const onDay = onDayIds();
+      const groups = new Map();
+      library.forEach((ex) => {
+        const c = (ex.category || '').trim() || 'Uncategorized';
+        if (!groups.has(c)) groups.set(c, []);
+        groups.get(c).push(ex);
+      });
+      const names = [...groups.keys()].sort((a, b) => (a === 'Uncategorized') - (b === 'Uncategorized') || a.localeCompare(b));
+      if (!names.length) { $('pickerList').innerHTML = '<div class="empty-state">Your library is empty. Add exercises in Exercise Builder first.</div>'; return; }
+
+      $('pickerList').innerHTML = names.map((c) => {
+        const items = groups.get(c);
+        const free = items.filter((ex) => !onDay.has(ex._id)).length;
+        const real = c !== 'Uncategorized';
+        return `
+        <div class="picker-cat">
+          <div class="picker-cat-name">${esc(c)}<small>${items.length}</small></div>
+          ${real ? `<button type="button" class="btn btn-outline btn-sm" ${free ? '' : 'disabled'} data-cat="${esc(c)}">Add whole category${free ? ` (${free})` : ''}</button>` : ''}
+        </div>
+        ${items.map((ex) => {
+          const has = onDay.has(ex._id);
+          return `
+          <label class="picker-item ${has ? 'on-day' : ''}">
+            <input type="checkbox" value="${ex._id}" ${has ? 'disabled' : ''} ${picked.has(ex._id) ? 'checked' : ''} />
+            <img src="${esc(ex.imageUrl || '')}" alt="" />
+            <div>
+              <div style="font-weight:600;">${esc(ex.name)} ${ex.isTimedHold ? '<span class="badge badge-timed">Timed</span>' : ''}</div>
+              <div style="font-size:0.8rem;color:var(--color-text-muted);">${has ? 'Already on this day' : ex.isTimedHold ? 'Timed hold' : `${ex.defaultSets} sets × ${ex.defaultWorkSeconds}s`}</div>
+            </div>
+          </label>`;
+        }).join('')}`;
+      }).join('');
+
+      $('pickerList').querySelectorAll('input[type=checkbox]').forEach((cb) =>
+        cb.addEventListener('change', () => {
+          cb.checked ? picked.add(cb.value) : picked.delete(cb.value);
+          updatePickedBtn();
+        })
+      );
+      $('pickerList').querySelectorAll('[data-cat]').forEach((b) =>
+        b.addEventListener('click', () => addBulk({ category: b.dataset.cat }))
+      );
+      updatePickedBtn();
+    }
+
+    function updatePickedBtn() {
+      const b = $('addSelectedBtn');
+      b.disabled = picked.size === 0;
+      b.textContent = picked.size ? `Add selected (${picked.size})` : 'Add selected';
+    }
+
+    async function addBulk(payload) {
+      try {
+        const { workout, added } = await api.addExercisesBulk(currentWorkout._id, payload);
+        replaceWorkout(workout);
+        picked.clear();
+        renderDay();
+        renderPicker();
+        if (!added) ui.alert('Nothing new to add — those exercises are already on this day.');
+      } catch (err) {
+        ui.alert(err.message);
+      }
+    }
+
+    $('addExerciseToDayBtn').addEventListener('click', () => {
+      picked.clear();
+      renderPicker();
+      $('pickerOverlay').classList.add('show');
+    });
+    $('addSelectedBtn').addEventListener('click', () => addBulk({ exerciseIds: [...picked] }));
+    $('cancelPickerBtn').addEventListener('click', () => $('pickerOverlay').classList.remove('show'));
+
+    // ---- Timing modal ----
+    let holdValues = [];
+
+    function isHold(entry) { return !!(entry.exercise && entry.exercise.isTimedHold); }
+
+    function renderSetInputs() {
+      const sets = Math.max(1, Math.min(20, Number($('timingSets').value) || 1));
+      const last = holdValues.length ? holdValues[holdValues.length - 1] : 30;
+      const next = [];
+      for (let i = 0; i < sets; i++) next.push(holdValues[i] != null ? holdValues[i] : last);
+      holdValues = next;
+      $('setTimingList').innerHTML = holdValues
+        .map((v, i) => `
+        <div class="set-timing-row">
+          <label>Set ${i + 1}</label>
+          <input type="number" class="form-input" min="1" value="${v}" data-i="${i}" required />
+          <span>seconds</span>
+        </div>`).join('');
+      $('setTimingList').querySelectorAll('input').forEach((inp) =>
+        inp.addEventListener('input', () => { holdValues[Number(inp.dataset.i)] = Number(inp.value) || 0; })
+      );
+    }
+
+    function openTimingModal(entryId) {
+      const entry = currentWorkout.exercises.find((e) => e._id === entryId);
+      const hold = isHold(entry);
+      $('timingModalTitle').textContent = `${hold ? 'Sets & timing' : 'Customise'} — ${entry.exercise.name}`;
+      $('timingEntryId').value = entryId;
+      $('timingSets').value = entry.sets;
+      $('timingRestSeconds').value = entry.restSeconds;
+      $('repFields').style.display = hold ? 'none' : '';
+      $('holdFields').style.display = hold ? '' : 'none';
+      $('timingWorkSeconds').required = !hold;
+      if (hold) {
+        holdValues = entry.setTimings && entry.setTimings.length ? entry.setTimings.slice() : Array(entry.sets).fill(entry.workSeconds || 30);
+        renderSetInputs();
+      } else {
+        $('timingReps').value = entry.reps || '';
+        $('timingWorkSeconds').value = entry.workSeconds;
+      }
+      $('timingOverlay').classList.add('show');
+    }
+
+    $('timingSets').addEventListener('input', () => {
+      const entry = currentWorkout.exercises.find((e) => e._id === $('timingEntryId').value);
+      if (entry && isHold(entry)) renderSetInputs();
+    });
+    $('cancelTimingBtn').addEventListener('click', () => $('timingOverlay').classList.remove('show'));
+
+    $('timingForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const entryId = $('timingEntryId').value;
+      const entry = currentWorkout.exercises.find((x) => x._id === entryId);
+      const payload = { sets: Number($('timingSets').value), restSeconds: Number($('timingRestSeconds').value) };
+      if (isHold(entry)) {
+        if (holdValues.some((v) => !(v > 0))) return ui.alert('Give every set a hold time greater than 0 seconds.');
+        payload.setTimings = holdValues.slice();
+        payload.workSeconds = holdValues[0];
+      } else {
+        payload.reps = $('timingReps').value;
+        payload.workSeconds = Number($('timingWorkSeconds').value);
+      }
+      try {
+        const { workout } = await api.updateDayExerciseTiming(currentWorkout._id, entryId, payload);
+        replaceWorkout(workout);
+        $('timingOverlay').classList.remove('show');
+        renderDay();
+      } catch (err) {
+        ui.alert(err.message);
+      }
+    });
+
+    $('removeFromDayBtn').addEventListener('click', async () => {
+      const entryId = $('timingEntryId').value;
+      if (!(await ui.confirm({ title: 'Remove exercise?', message: 'It will be taken out of this day. You can add it back anytime.', confirmText: 'Remove', tone: 'danger' }))) return;
+      try {
+        await api.removeExerciseFromDay(currentWorkout._id, entryId);
+        currentWorkout.exercises = currentWorkout.exercises.filter((e) => e._id !== entryId);
+        $('timingOverlay').classList.remove('show');
+        buildDaySelect();
+        renderDay();
+      } catch (err) {
+        ui.alert(err.message);
+      }
+    });
+
+    // ---- Copy day to other days ----
+    function renderCopyGrid() {
+      $('copyGrid').innerHTML = allWorkouts.map((w) => {
+        const src = w.day === currentWorkout.day;
+        return `<div class="copy-cell ${src ? 'src' : ''} ${copyTargets.has(w.day) ? 'sel' : ''}" data-day="${w.day}" title="${esc(w.title || '')}">${w.day}</div>`;
+      }).join('');
+      $('copyGrid').querySelectorAll('.copy-cell:not(.src)').forEach((c) =>
+        c.addEventListener('click', () => {
+          const d = Number(c.dataset.day);
+          copyTargets.has(d) ? copyTargets.delete(d) : copyTargets.add(d);
+          c.classList.toggle('sel');
+          $('copyGoBtn').textContent = copyTargets.size ? `Copy to ${copyTargets.size} day${copyTargets.size === 1 ? '' : 's'}` : 'Copy';
+        })
+      );
+      $('copyGoBtn').textContent = copyTargets.size ? `Copy to ${copyTargets.size} day${copyTargets.size === 1 ? '' : 's'}` : 'Copy';
+    }
+
+    $('copyDayBtn').addEventListener('click', () => {
+      if (!currentWorkout.exercises.length) return ui.alert('This day has no exercises to copy yet.');
+      copyTargets.clear();
+      $('copyTitle').textContent = `Copy Day ${currentWorkout.day} to…`;
+      renderCopyGrid();
+      $('copyOverlay').classList.add('show');
+    });
+    $('copyWeekBtn').addEventListener('click', () => {
+      allWorkouts.filter((w) => w.week === currentWorkout.week && w.day !== currentWorkout.day).forEach((w) => copyTargets.add(w.day));
+      renderCopyGrid();
+    });
+    $('copyAllBtn').addEventListener('click', () => {
+      allWorkouts.filter((w) => w.day !== currentWorkout.day).forEach((w) => copyTargets.add(w.day));
+      renderCopyGrid();
+    });
+    $('copyNoneBtn').addEventListener('click', () => { copyTargets.clear(); renderCopyGrid(); });
+    $('copyCancelBtn').addEventListener('click', () => $('copyOverlay').classList.remove('show'));
+
+    $('copyGoBtn').addEventListener('click', async () => {
+      if (!copyTargets.size) return ui.alert('Pick at least one day.');
+      const mode = document.querySelector('input[name=copyMode]:checked').value;
+      const ok = await ui.confirm({
+        title: 'Copy exercises?',
+        message: `Day ${currentWorkout.day}'s exercises will ${mode === 'replace' ? 'replace the exercises on' : 'be added to'} ${copyTargets.size} day${copyTargets.size === 1 ? '' : 's'}.`,
+        confirmText: 'Copy',
+        tone: mode === 'replace' ? 'warning' : 'default'
+      });
+      if (!ok) return;
+      try {
+        await api.copyDay(currentWorkout._id, { targetDays: [...copyTargets], mode });
+        const { workouts } = await api.getWorkouts();
+        const keep = currentWorkout.day;
+        allWorkouts = workouts.sort((a, b) => a.day - b.day);
+        $('copyOverlay').classList.remove('show');
+        buildDaySelect();
+        loadDay(keep);
+      } catch (err) {
+        ui.alert(err.message);
+      }
+    });
+  </script>
+</body>
+</html>

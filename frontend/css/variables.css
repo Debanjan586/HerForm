@@ -1,0 +1,190 @@
+:root,
+[data-theme="light"] {
+  /* Color palette — clean neutral light theme with a violet accent */
+  --color-bg: #F6F6F8;
+  --color-surface: #FFFFFF;
+  --color-surface-alt: #EFEFF3;
+  --color-text: #15151A;
+  --color-text-muted: #6B6B76;
+  --color-accent: #6C5CE7;
+  --color-accent-light: #E6E2FB;
+  --color-accent-dark: #5444D0;
+  --color-accent-soft: #8A7EF0;
+  --color-success: #2FB876;
+  --color-warning: #E8A23D;
+  --color-warning-rgb: 232, 162, 61;
+  --color-accent-rgb: 108, 92, 231;
+  --color-error: #E25A5A;
+  --color-error-rgb: 226, 90, 90;
+  --color-error-bg: rgba(var(--color-error-rgb), 0.12);
+  --color-border: #E4E4EA;
+  --color-overlay: rgba(10, 10, 14, 0.55);
+
+  /* Scrim base (RGB triplet, no alpha) used to build the dark gradients
+     that sit over photos/figures (day cards, workout player background,
+     completion screen). Tied to the palette so a repalette can retint
+     these too, instead of leaving them pinned to one hardcoded hue. */
+  --scrim-rgb: 10, 8, 20;
+  --color-scrim-strong: rgba(var(--scrim-rgb), 0.92);
+  --color-scrim-mid: rgba(var(--scrim-rgb), 0.55);
+  --color-scrim-soft: rgba(var(--scrim-rgb), 0.15);
+  --color-scrim-faint: rgba(var(--scrim-rgb), 0.05);
+
+  /* Text/surfaces meant to sit on a permanently-dark background (the
+     workout player, card overlays, completion screen) regardless of
+     the active theme. */
+  --color-on-dark: #FFFFFF;
+  --color-on-dark-muted: rgba(255, 255, 255, 0.65);
+  --color-on-dark-subtle: rgba(255, 255, 255, 0.15);
+  --color-nav-shadow: rgba(var(--scrim-rgb), 0.05);
+
+  /* Permanently-dark surface for full-bleed screens (workout player,
+     completion screen) that must stay dark-on-light-text in BOTH
+     themes — unlike --color-text/--color-surface, which flip. */
+  --color-dark-surface: #17171C;
+  --color-dark-surface-alt: #221E33;
+
+  /* kept for any legacy references */
+  --color-sage: var(--color-accent);
+  --color-sage-light: var(--color-accent-light);
+  --color-sage-dark: var(--color-accent-dark);
+  --color-olive: var(--color-accent-soft);
+  --color-olive-dark: var(--color-accent-dark);
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --color-bg: #0B0B0E;
+  --color-surface: #17171C;
+  --color-surface-alt: #1F1F26;
+  --color-text: #F2F2F5;
+  --color-text-muted: #8E8E99;
+  --color-accent: #8A7EF0;
+  --color-accent-light: #2A2545;
+  --color-accent-dark: #6C5CE7;
+  --color-accent-soft: #A79CF5;
+  --color-success: #3FD08C;
+  --color-warning: #F0B255;
+  --color-warning-rgb: 240, 178, 85;
+  --color-accent-rgb: 138, 126, 240;
+  --color-error: #F0716F;
+  --color-error-rgb: 240, 113, 111;
+  --color-error-bg: rgba(var(--color-error-rgb), 0.16);
+  --color-border: #2A2A33;
+  --color-overlay: rgba(0, 0, 0, 0.7);
+
+  --scrim-rgb: 0, 0, 0;
+  --color-scrim-strong: rgba(var(--scrim-rgb), 0.92);
+  --color-scrim-mid: rgba(var(--scrim-rgb), 0.6);
+  --color-scrim-soft: rgba(var(--scrim-rgb), 0.25);
+  --color-scrim-faint: rgba(var(--scrim-rgb), 0.08);
+
+  --color-on-dark: #FFFFFF;
+  --color-on-dark-muted: rgba(255, 255, 255, 0.65);
+  --color-on-dark-subtle: rgba(255, 255, 255, 0.15);
+  --color-nav-shadow: rgba(0, 0, 0, 0.3);
+
+  --color-dark-surface: #0B0B0E;
+  --color-dark-surface-alt: #1A1726;
+
+  --color-sage: var(--color-accent);
+  --color-sage-light: var(--color-accent-light);
+  --color-sage-dark: var(--color-accent-dark);
+  --color-olive: var(--color-accent-soft);
+  --color-olive-dark: var(--color-accent-dark);
+
+  color-scheme: dark;
+}
+
+:root {
+  /* Typography */
+  --font-main: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+
+  /* Spacing scale */
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 20px;
+  --space-lg: 32px;
+  --space-xl: 48px;
+  --space-xxl: 64px;
+
+  /* Radii & shadows */
+  --radius-sm: 10px;
+  --radius-md: 18px;
+  --radius-lg: 28px;
+  --radius-full: 999px;
+  --shadow-soft: 0 4px 20px rgba(10, 10, 14, 0.06);
+  --shadow-medium: 0 8px 30px rgba(10, 10, 14, 0.10);
+  --shadow-lifted: 0 14px 40px rgba(10, 10, 14, 0.16);
+
+  /* Motion */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 150ms var(--ease-smooth);
+  --transition-base: 250ms var(--ease-smooth);
+}
+
+[data-theme="dark"] {
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --shadow-medium: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --shadow-lifted: 0 14px 40px rgba(0, 0, 0, 0.55);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-main);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--transition-base), color var(--transition-base);
+  user-select: none;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  color: var(--color-text);
+  line-height: 1.25;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* Scrollbars hidden everywhere by default — mobile relies on native
+   touch scrolling, desktop testing still works via drag/trackpad.
+   Any element that wants a visible, styled scrollbar opts in with
+   .styled-scrollbar (see components.css). */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+* {
+  scrollbar-width: none; /* Firefox */
+}

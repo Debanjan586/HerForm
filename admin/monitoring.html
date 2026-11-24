@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>HERFORM Admin — Workout Monitoring</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/variables.css" />
+<link rel="stylesheet" href="css/admin.css" />
+<link rel="stylesheet" href="css/ui.css" />
+<script src="js/theme.js"></script>
+<script src="js/ui.js"></script>
+</head>
+<body>
+  <div class="admin-shell">
+    <div class="main-content">
+      <div class="page-header">
+        <h1>Workout Monitoring</h1>
+        <p>Programme progress per user, including completed and pending exercises.</p>
+      </div>
+      <div id="content"><div class="loading-spinner"></div></div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth-guard.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    (async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+      renderSidebar('monitoring');
+
+      const content = document.getElementById('content');
+      try {
+        const { monitoring } = await api.getMonitoring();
+
+        if (monitoring.length === 0) {
+          content.innerHTML = `<div class="panel"><div class="empty-state">No users yet.</div></div>`;
+          return;
+        }
+
+        content.innerHTML = monitoring
+          .map(
+            (m) => `
+          <div class="panel">
+            <div class="panel-title">
+              <div>
+                <strong>${m.user.name}</strong>
+                <span style="color:var(--color-text-muted); font-size:0.85rem;"> — ${m.user.email}</span>
+              </div>
+              <div>
+                <span class="badge badge-success">Week ${m.currentWeek} / Day ${m.currentDay}</span>
+              </div>
+            </div>
+            <div class="grid-2" style="margin-bottom:16px;">
+              <div class="stat-card">
+                <div class="label">Completed Workouts</div>
+                <div class="value" style="font-size:1.4rem;">${m.completedWorkouts}</div>
+              </div>
+              <div class="stat-card">
+                <div class="label">Total Sessions</div>
+                <div class="value" style="font-size:1.4rem;">${m.totalSessions}</div>
+              </div>
+            </div>
+            <table>
+              <thead><tr><th>Day</th><th>Workout</th><th>Status</th><th>Started</th><th>Completed</th></tr></thead>
+              <tbody>
+                ${m.sessions
+                  .map(
+                    (s) => `
+                  <tr>
+                    <td>${s.day}</td>
+                    <td>${s.workout?.title || '—'}</td>
+                    <td>${
+                      s.fullyCompleted
+                        ? '<span class="badge badge-success">Completed</span>'
+                        : '<span class="badge badge-muted">In Progress</span>'
+                    }</td>
+                    <td>${s.startedAt ? new Date(s.startedAt).toLocaleString() : '—'}</td>
+                    <td>${s.completedAt ? new Date(s.completedAt).toLocaleString() : '—'}</td>
+                  </tr>`
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+          </div>
+        `
+          )
+          .join('');
+      } catch (err) {
+        content.innerHTML = `<div class="panel"><div class="empty-state">Could not load monitoring data. ${err.message}</div></div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

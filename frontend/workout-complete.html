@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>HERFORM — Workout Complete</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/variables.css" />
+<link rel="stylesheet" href="css/components.css" />
+<link rel="stylesheet" href="css/experience.css" />
+<link rel="stylesheet" href="css/ui.css" />
+<link rel="stylesheet" href="css/flame.css" />
+<script src="js/theme.js"></script>
+<script src="js/ui.js"></script>
+</head>
+<body>
+  <div class="completion-shell" id="completionShell">
+    <div class="loading-spinner" style="border-color: var(--color-on-dark-subtle); border-top-color: var(--color-on-dark);"></div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth-guard.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/flame.js"></script>
+  <script src="js/day-lock.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const day = params.get('day');
+
+    (async function init() {
+      const user = await requireUserAuth();
+      if (!user) return;
+
+      const shell = document.getElementById('completionShell');
+
+      let dayLabel = day;
+      try {
+        if (day) {
+          const { workout } = await api.getWorkoutByDay(day);
+          dayLabel = workout.day;
+        }
+      } catch (err) {
+        // Non-fatal — fall back to the raw day param for the message
+      }
+
+      let streak = 0;
+      try {
+        const summary = await api.getProgressSummary();
+        streak = computeStreakFromCalendar(summary.calendar);
+      } catch (err) { /* non-fatal: just hide the streak pill */ }
+
+      shell.innerHTML = `
+        <div class="completion-flame" id="completionFlame"></div>
+        ${streak > 0 ? `<div class="completion-streak"><strong>${streak}</strong> day streak</div>` : ''}
+        <div class="completion-title">Day ${dayLabel} complete!</div>
+        <div class="completion-message">Next day is waiting for you — don't lose your streak!</div>
+        <button class="completion-btn" id="homeBtn">Back to Home</button>
+      `;
+
+      // Light the fire, then throw a burst of sparks once it has caught.
+      const flameHost = document.getElementById('completionFlame');
+      flame.create(flameHost, { size: 96, embers: 18 });
+      setTimeout(() => flame.burst(flameHost, 26), 650);
+
+      document.getElementById('homeBtn').addEventListener('click', () => {
+        ui.go('index.html');
+      });
+    })();
+  </script>
+</body>
+</html>

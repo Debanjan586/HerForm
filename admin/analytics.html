@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>HERFORM Admin — Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/variables.css" />
+<link rel="stylesheet" href="css/admin.css" />
+<link rel="stylesheet" href="css/ui.css" />
+<script src="js/theme.js"></script>
+<script src="js/ui.js"></script>
+</head>
+<body>
+  <div class="admin-shell">
+    <div class="main-content">
+      <div class="page-header">
+        <h1>Analytics</h1>
+        <p>Weekly completion trends and recent daily activity.</p>
+      </div>
+      <div id="content"><div class="loading-spinner"></div></div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth-guard.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    (async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+      renderSidebar('analytics');
+
+      const content = document.getElementById('content');
+      try {
+        const { dailyActivity, weeklyCompletion } = await api.getAnalytics();
+
+        const maxWeekly = Math.max(1, ...weeklyCompletion.map((w) => w.completed));
+        const maxDaily = Math.max(1, ...dailyActivity.map((d) => d.count));
+
+        content.innerHTML = `
+          <div class="panel">
+            <div class="panel-title">Weekly Workout Completion (Programme Weeks 1–12)</div>
+            <div class="bar-chart" style="margin-bottom:28px;">
+              ${weeklyCompletion
+                .map(
+                  (w) => `
+                <div class="bar" style="height:${(w.completed / maxWeekly) * 140 || 2}px;">
+                  <span class="bar-label">W${w.week}</span>
+                </div>`
+                )
+                .join('')}
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">Daily Activity (Last 30 Days)</div>
+            ${
+              dailyActivity.length === 0
+                ? '<div class="empty-state">No activity recorded in the last 30 days.</div>'
+                : `<div class="bar-chart" style="margin-bottom:28px;">
+                    ${dailyActivity
+                      .map(
+                        (d) => `
+                      <div class="bar" style="height:${(d.count / maxDaily) * 140 || 2}px;">
+                        <span class="bar-label" style="font-size:0.6rem;">${d.date.slice(5)}</span>
+                      </div>`
+                      )
+                      .join('')}
+                  </div>`
+            }
+          </div>
+        `;
+      } catch (err) {
+        content.innerHTML = `<div class="panel"><div class="empty-state">Could not load analytics. ${err.message}</div></div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

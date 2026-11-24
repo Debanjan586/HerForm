@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>HERFORM Admin — Exercises Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/variables.css" />
+<link rel="stylesheet" href="css/admin.css" />
+<link rel="stylesheet" href="css/ui.css" />
+<script src="js/theme.js"></script>
+<script src="js/ui.js"></script>
+<style>
+  .lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+  .lib-card { background: var(--color-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-soft); overflow: hidden; }
+  .lib-card-img { width: 100%; aspect-ratio: 4/3; background: var(--color-surface-alt); display:flex; align-items:center; justify-content:center; color: var(--color-text-muted); font-size: 0.8rem; }
+  .lib-card-img img { width: 100%; height: 100%; object-fit: cover; }
+  .lib-card-body { padding: 16px; }
+  .lib-card-title { font-weight: 700; margin-bottom: 4px; }
+  .lib-card-meta { font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 10px; }
+  .upload-preview { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--radius-sm); display:none; margin-bottom: 10px; background: var(--color-surface-alt); }
+
+  /* category filter chips */
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .chip {
+    padding: 7px 14px; border-radius: 999px; font-size: 0.82rem; font-weight: 600;
+    background: var(--color-surface); color: var(--color-text-muted);
+    border: 1.5px solid var(--color-border);
+    transition: background 200ms var(--ease-smooth), color 200ms var(--ease-smooth), border-color 200ms var(--ease-smooth), transform 160ms var(--ease-smooth);
+  }
+  .chip:hover { border-color: var(--color-accent); color: var(--color-text); }
+  .chip.active { background: var(--color-accent-dark); border-color: var(--color-accent-dark); color: var(--color-on-dark); }
+  .chip .count { opacity: 0.7; margin-left: 4px; font-weight: 500; }
+  .sel-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px; font-size:0.85rem; color:var(--color-text-muted); }
+  .sel-bar label { display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:600; color:var(--color-text); }
+  .sel-bar input, .card-check { width:18px; height:18px; accent-color: var(--color-accent-dark); cursor:pointer; }
+  .lib-card { position: relative; transition: box-shadow 200ms var(--ease-smooth), outline-color 200ms var(--ease-smooth); outline: 2px solid transparent; }
+  .lib-card.checked { outline-color: var(--color-accent-dark); }
+  .card-check-wrap { position:absolute; top:10px; left:10px; z-index:2; padding:5px; border-radius:8px; background: var(--color-surface); box-shadow: var(--shadow-soft); display:flex; }
+  .badge-timed { background: rgba(var(--color-warning-rgb), 0.18); color: var(--color-warning); }
+
+  /* timed-hold switch: greys out the normal-exercise fields smoothly */
+  .timed-toggle {
+    display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px;
+    padding: 12px 14px; border-radius: var(--radius-sm);
+    background: var(--color-surface-alt); border: 1.5px solid var(--color-border);
+    transition: border-color 250ms var(--ease-smooth), background 250ms var(--ease-smooth);
+  }
+  .timed-toggle.on { border-color: var(--color-warning); background: rgba(var(--color-warning-rgb), 0.1); }
+  .timed-toggle input { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--color-accent-dark); }
+  .timed-toggle label { font-weight: 600; font-size: 0.9rem; cursor: pointer; }
+  .timed-toggle .hint { display: block; font-weight: 400; font-size: 0.78rem; color: var(--color-text-muted); margin-top: 2px; }
+  .normal-fields { transition: opacity 300ms var(--ease-smooth), filter 300ms var(--ease-smooth); }
+  .normal-fields.is-off { opacity: 0.35; filter: grayscale(1); pointer-events: none; user-select: none; }
+  .normal-fields .off-note {
+    display: none; font-size: 0.78rem; color: var(--color-text-muted); margin: -4px 0 10px;
+  }
+  .normal-fields.is-off .off-note { display: block; }
+  .form-input:disabled { cursor: not-allowed; }
+</style>
+</head>
+<body>
+  <div class="admin-shell">
+    <div class="main-content">
+      <div class="page-header">
+        <h1>Exercises Library</h1>
+        <p>Create exercises once here, then use them in the Day Builder. Give related exercises the same category (e.g. "Core") and you can add the whole category to a day in one click.</p>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <button class="btn btn-primary" id="addExerciseBtn">+ Add Exercise</button>
+      </div>
+
+      <div class="chip-row" id="categoryChips"></div>
+      <div class="sel-bar" id="selBar" style="display:none;"><label><input type="checkbox" id="selAll" /> Select all</label><span id="selCount"></span><button class="btn btn-danger btn-sm" id="delSelBtn" style="display:none;">Delete selected</button></div>
+      <div class="lib-grid" id="libGrid"><div class="loading-spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Exercise edit modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box">
+      <h3 id="modalTitle" style="margin-bottom:16px;">Add Exercise</h3>
+      <form id="exerciseForm">
+        <input type="hidden" id="exId" />
+
+        <img class="upload-preview" id="uploadPreview" />
+        <input type="hidden" id="exImagePublicId" />
+        <div style="display:flex; gap:8px; margin-bottom:10px;">
+          <button type="button" class="btn btn-outline btn-sm" id="uploadBtn">Upload Image</button>
+          <span style="color:var(--color-text-muted); font-size:0.82rem; align-self:center;">or</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Paste Image URL</label>
+          <input class="form-input" id="exImageUrl" placeholder="https://..." />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Title</label>
+          <input class="form-input" id="exName" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category — exercises with the same category can be added to a day together</label>
+          <input class="form-input" id="exCategory" list="categoryList" placeholder='e.g. "Core" or "Legs"' autocomplete="off" />
+          <datalist id="categoryList"></datalist>
+        </div>
+
+        <div class="timed-toggle" id="timedToggle">
+          <input type="checkbox" id="exIsTimedHold" />
+          <label for="exIsTimedHold">
+            Timed hold (plank, wall-sit…)
+            <span class="hint">Tick this and the fields below switch off. You choose the number of sets and the time of every set when you add it to a day.</span>
+          </label>
+        </div>
+
+        <div class="normal-fields" id="normalFields">
+          <div class="off-note">Not used for timed holds.</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Default Sets</label>
+              <input type="number" class="form-input" id="exSets" min="1" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Default Reps (label, e.g. 12 or 12-15)</label>
+              <input class="form-input" id="exReps" placeholder="e.g. 12 or 12-15" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Default Work Seconds (per set)</label>
+              <input type="number" class="form-input" id="exWorkSeconds" min="1" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Default Rest Seconds (between sets)</label>
+              <input type="number" class="form-input" id="exRestSeconds" min="0" required />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Instructions</label>
+          <textarea class="form-textarea" id="exInstructions" rows="2"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Common Mistakes</label>
+          <textarea class="form-textarea" id="exMistakes" rows="2"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Safety Tips</label>
+          <textarea class="form-textarea" id="exSafety" rows="2"></textarea>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:18px;">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-outline" id="cancelModalBtn">Cancel</button>
+          <button type="button" class="btn btn-danger" id="archiveBtn" style="display:none; margin-left:auto;">Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth-guard.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/cloudinary-upload.js"></script>
+  <script>
+    let library = [];
+    let activeCategory = 'all';
+    const checked = new Set();
+
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+
+    (async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+      renderSidebar('exercises');
+      await loadLibrary();
+    })();
+
+    async function loadLibrary() {
+      const grid = document.getElementById('libGrid');
+      try {
+        const { exercises } = await api.getExerciseLibrary();
+        library = exercises;
+        renderChips();
+        renderGrid();
+      } catch (err) {
+        grid.innerHTML = `<div class="empty-state">Could not load library. ${esc(err.message)}</div>`;
+      }
+    }
+
+    function categoriesOf(list) {
+      const map = new Map();
+      list.forEach((ex) => {
+        const c = (ex.category || '').trim();
+        if (c) map.set(c, (map.get(c) || 0) + 1);
+      });
+      return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    }
+
+    function renderChips() {
+      const cats = categoriesOf(library);
+      // category suggestions in the form, so the same name is reused exactly
+      document.getElementById('categoryList').innerHTML = cats.map(([c]) => `<option value="${esc(c)}"></option>`).join('');
+
+      const row = document.getElementById('categoryChips');
+      if (cats.length === 0) { row.innerHTML = ''; return; }
+      if (activeCategory !== 'all' && !cats.some(([c]) => c === activeCategory)) activeCategory = 'all';
+      row.innerHTML =
+        `<button class="chip ${activeCategory === 'all' ? 'active' : ''}" data-cat="all">All<span class="count">${library.length}</span></button>` +
+        cats.map(([c, n]) => `<button class="chip ${activeCategory === c ? 'active' : ''}" data-cat="${esc(c)}">${esc(c)}<span class="count">${n}</span></button>`).join('');
+      row.querySelectorAll('.chip').forEach((chip) =>
+        chip.addEventListener('click', () => {
+          activeCategory = chip.dataset.cat;
+          checked.clear();
+          renderChips();
+          renderGrid();
+        })
+      );
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById('libGrid');
+      const shown = activeCategory === 'all' ? library : library.filter((ex) => (ex.category || '').trim() === activeCategory);
+
+      if (shown.length === 0) {
+        grid.innerHTML = `<div class="empty-state">${library.length === 0 ? 'No exercises yet. Add your first one above.' : 'No exercises in this category.'}</div>`;
+        return;
+      }
+
+      grid.innerHTML = shown
+        .map(
+          (ex) => `
+        <div class="lib-card ${checked.has(ex._id) ? 'checked' : ''}">
+          <label class="card-check-wrap"><input type="checkbox" class="card-check" data-id="${ex._id}" ${checked.has(ex._id) ? 'checked' : ''} /></label>
+          <div class="lib-card-img">
+            ${ex.imageUrl ? `<img src="${esc(ex.imageUrl)}" alt="${esc(ex.name)}" />` : 'No image yet'}
+          </div>
+          <div class="lib-card-body">
+            <div class="lib-card-title">${esc(ex.name)}</div>
+            <div class="lib-card-meta">
+              ${esc(ex.category || 'Uncategorized')} ·
+              ${ex.isTimedHold ? '<span class="badge badge-timed">Timed hold</span>' : 'Reps-based'}<br/>
+              ${ex.isTimedHold
+                ? 'Sets and time are chosen per day'
+                : `${ex.defaultSets} sets × ${ex.defaultWorkSeconds}s work / ${ex.defaultRestSeconds}s rest`}
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="openEditModal('${ex._id}')">Edit</button>
+          </div>
+        </div>`
+        )
+        .join('');
+      grid.querySelectorAll('.card-check').forEach((cb) =>
+        cb.addEventListener('change', () => {
+          cb.checked ? checked.add(cb.dataset.id) : checked.delete(cb.dataset.id);
+          cb.closest('.lib-card').classList.toggle('checked', cb.checked);
+          updateSelBar();
+        })
+      );
+      updateSelBar();
+    }
+
+    function shownList() {
+      return activeCategory === 'all' ? library : library.filter((ex) => (ex.category || '').trim() === activeCategory);
+    }
+
+    function updateSelBar() {
+      const shown = shownList();
+      const n = shown.filter((ex) => checked.has(ex._id)).length;
+      $('selBar').style.display = shown.length ? 'flex' : 'none';
+      $('selAll').checked = shown.length > 0 && n === shown.length;
+      $('selAll').indeterminate = n > 0 && n < shown.length;
+      $('selCount').textContent = n ? `${n} selected` : '';
+      $('delSelBtn').style.display = n ? '' : 'none';
+    }
+
+    $('selAll').addEventListener('change', () => {
+      const shown = shownList();
+      shown.forEach((ex) => ($('selAll').checked ? checked.add(ex._id) : checked.delete(ex._id)));
+      renderGrid();
+    });
+
+    $('delSelBtn').addEventListener('click', async () => {
+      const ids = shownList().filter((ex) => checked.has(ex._id)).map((ex) => ex._id);
+      if (!ids.length) return;
+      const ok = await ui.confirm({ title: `Delete ${ids.length} exercise${ids.length === 1 ? '' : 's'}?`, message: 'They are permanently deleted from the library and removed from every day that uses them. This cannot be undone.', confirmText: 'Delete', tone: 'danger' });
+      if (!ok) return;
+      try {
+        await Promise.all(ids.map((id) => api.deleteExercise(id)));
+      } catch (err) {
+        ui.alert(err.message);
+      }
+      ids.forEach((id) => checked.delete(id));
+      await loadLibrary();
+    });
+
+    // Timed hold ON => every normal-exercise field is switched off.
+    function syncTimedState() {
+      const on = document.getElementById('exIsTimedHold').checked;
+      document.getElementById('normalFields').classList.toggle('is-off', on);
+      document.getElementById('timedToggle').classList.toggle('on', on);
+      document.querySelectorAll('#normalFields input').forEach((i) => { i.disabled = on; });
+    }
+    document.getElementById('exIsTimedHold').addEventListener('change', syncTimedState);
+
+    function openEditModal(id) {
+      const ex = id ? library.find((e) => e._id === id) : null;
+      document.getElementById('modalTitle').textContent = ex ? 'Edit Exercise' : 'Add Exercise';
+      document.getElementById('exId').value = ex ? ex._id : '';
+      document.getElementById('exName').value = ex ? ex.name : '';
+      document.getElementById('exCategory').value = ex ? ex.category || '' : (activeCategory !== 'all' ? activeCategory : '');
+      document.getElementById('exIsTimedHold').checked = ex ? ex.isTimedHold : false;
+      document.getElementById('exSets').value = ex ? ex.defaultSets : 3;
+      document.getElementById('exReps').value = ex ? ex.defaultReps : '12';
+      document.getElementById('exWorkSeconds').value = ex ? ex.defaultWorkSeconds : 30;
+      document.getElementById('exRestSeconds').value = ex ? ex.defaultRestSeconds : 20;
+      document.getElementById('exInstructions').value = ex ? ex.instructions : '';
+      document.getElementById('exMistakes').value = ex ? ex.commonMistakes : '';
+      document.getElementById('exSafety').value = ex ? ex.safetyTips : '';
+      document.getElementById('exImageUrl').value = ex ? ex.imageUrl || '' : '';
+      document.getElementById('exImagePublicId').value = ex ? ex.imagePublicId || '' : '';
+      syncTimedState();
+
+      const preview = document.getElementById('uploadPreview');
+      if (ex && ex.imageUrl) {
+        preview.src = ex.imageUrl;
+        preview.style.display = 'block';
+      } else {
+        preview.style.display = 'none';
+      }
+
+      document.getElementById('archiveBtn').style.display = ex ? 'inline-flex' : 'none';
+      document.getElementById('modalOverlay').classList.add('show');
+    }
+
+    document.getElementById('addExerciseBtn').addEventListener('click', () => openEditModal(null));
+    document.getElementById('cancelModalBtn').addEventListener('click', () => {
+      document.getElementById('modalOverlay').classList.remove('show');
+    });
+
+    setupImageUploadControl({
+      triggerEl: document.getElementById('uploadBtn'),
+      previewEl: document.getElementById('uploadPreview'),
+      folder: 'herform/exercises',
+      onUploaded: ({ url, publicId }) => {
+        document.getElementById('exImageUrl').value = url;
+        document.getElementById('exImagePublicId').value = publicId;
+      }
+    });
+
+    // Live preview when a URL is pasted directly — also clears any
+    // Cloudinary publicId since this image is no longer one we uploaded
+    // (so we don't try to delete someone else's Cloudinary asset later).
+    document.getElementById('exImageUrl').addEventListener('input', (e) => {
+      const url = e.target.value.trim();
+      const preview = document.getElementById('uploadPreview');
+      if (url) {
+        preview.src = url;
+        preview.style.display = 'block';
+      } else {
+        preview.style.display = 'none';
+      }
+      document.getElementById('exImagePublicId').value = '';
+    });
+
+    document.getElementById('exerciseForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('exId').value;
+      const timed = document.getElementById('exIsTimedHold').checked;
+      const payload = {
+        name: document.getElementById('exName').value.trim(),
+        category: document.getElementById('exCategory').value.trim(),
+        isTimedHold: timed,
+        // Timed holds have no fixed reps; their sets + per-set time are set per day.
+        defaultSets: Number(document.getElementById('exSets').value) || 1,
+        defaultReps: timed ? '' : document.getElementById('exReps').value,
+        defaultWorkSeconds: Number(document.getElementById('exWorkSeconds').value) || 30,
+        defaultRestSeconds: Number(document.getElementById('exRestSeconds').value) || 0,
+        instructions: document.getElementById('exInstructions').value,
+        commonMistakes: document.getElementById('exMistakes').value,
+        safetyTips: document.getElementById('exSafety').value,
+        imageUrl: document.getElementById('exImageUrl').value,
+        imagePublicId: document.getElementById('exImagePublicId').value
+      };
+
+      try {
+        if (id) {
+          await api.updateExerciseLibrary(id, payload);
+        } else {
+          await api.createExercise(payload);
+        }
+        document.getElementById('modalOverlay').classList.remove('show');
+        await loadLibrary();
+      } catch (err) {
+        ui.alert(err.message);
+      }
+    });
+
+    document.getElementById('archiveBtn').addEventListener('click', async () => {
+      const id = document.getElementById('exId').value;
+      if (!(await ui.confirm({ title: 'Delete exercise?', message: 'It is permanently deleted from the library and removed from every day that uses it. This cannot be undone.', confirmText: 'Delete', tone: 'danger' }))) return;
+      try {
+        await api.deleteExercise(id);
+        document.getElementById('modalOverlay').classList.remove('show');
+        await loadLibrary();
+      } catch (err) {
+        ui.alert(err.message);
+      }
+    });
+  </script>
+</body>
+</html>

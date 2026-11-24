@@ -1,0 +1,205 @@
+/* ===================================================================
+   ui.css — shared motion + dialog layer (used by the app AND admin).
+   Every colour is a variables.css token, so a palette change still
+   retints everything here. Pairs with js/ui.js.
+   =================================================================== */
+
+/* ---------- Page enter / leave ---------- */
+body { animation: uiPageIn 380ms var(--ease-smooth) backwards; }
+html.ui-leaving body {
+  opacity: 0;
+  transition: opacity 220ms var(--ease-smooth);
+  pointer-events: none;
+}
+@keyframes uiPageIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- Staggered reveal (classes added by ui.js) ---------- */
+.ui-reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 520ms var(--ease-smooth),
+    transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--ui-delay, 0ms);
+  will-change: opacity, transform;
+}
+.ui-reveal.ui-in {
+  opacity: 1;
+  transform: none;
+}
+/* once settled, drop will-change and the delay so hover/press feel instant */
+.ui-reveal.ui-done { transition-delay: 0ms; will-change: auto; }
+
+/* ---------- Animated removal (ui.remove) ---------- */
+.ui-removing {
+  opacity: 0 !important;
+  transform: scale(0.96) translateY(-6px) !important;
+  transition: opacity 240ms var(--ease-smooth), transform 240ms var(--ease-smooth) !important;
+  pointer-events: none;
+}
+
+/* ---------- Press feedback ---------- */
+button, .btn, .nav-item, .avatar-btn, .theme-toggle-btn,
+.player-close-btn, .player-main-btn, .day-card-btn {
+  transition: transform 160ms var(--ease-smooth), opacity 200ms var(--ease-smooth),
+    background-color 220ms var(--ease-smooth), color 220ms var(--ease-smooth);
+}
+button:active:not(:disabled), .btn:active, .nav-item:active, .avatar-btn:active,
+.theme-toggle-btn:active, .player-close-btn:active, .player-main-btn:active,
+.day-card-btn:active {
+  transform: scale(0.95);
+}
+
+/* ===================================================================
+   Custom dialog (replaces native confirm()/alert())
+   =================================================================== */
+.ui-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  background: var(--color-overlay);
+  backdrop-filter: blur(0px);
+  opacity: 0;
+  transition: opacity 260ms var(--ease-smooth), backdrop-filter 260ms var(--ease-smooth);
+}
+.ui-dialog-overlay.open { opacity: 1; backdrop-filter: blur(6px); }
+
+.ui-dialog {
+  width: 100%;
+  max-width: 340px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg) var(--space-md) var(--space-md);
+  text-align: center;
+  box-shadow: var(--shadow-lifted);
+  opacity: 0;
+  transform: translateY(24px) scale(0.92);
+  transition:
+    opacity 260ms var(--ease-smooth),
+    transform 380ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.ui-dialog-overlay.open .ui-dialog { opacity: 1; transform: none; }
+/* closing: shrink away a touch faster, no overshoot */
+.ui-dialog-overlay.closing { opacity: 0; backdrop-filter: blur(0px); }
+.ui-dialog-overlay.closing .ui-dialog {
+  opacity: 0;
+  transform: translateY(10px) scale(0.96);
+  transition: opacity 200ms var(--ease-smooth), transform 200ms var(--ease-smooth);
+}
+
+/* staggered inner content so the dialog "builds" itself */
+.ui-dialog-icon, .ui-dialog-title, .ui-dialog-message, .ui-dialog-actions {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 320ms var(--ease-smooth), transform 360ms var(--ease-smooth);
+}
+.ui-dialog-overlay.open .ui-dialog-icon    { opacity: 1; transform: none; transition-delay: 90ms; }
+.ui-dialog-overlay.open .ui-dialog-title   { opacity: 1; transform: none; transition-delay: 140ms; }
+.ui-dialog-overlay.open .ui-dialog-message { opacity: 1; transform: none; transition-delay: 190ms; }
+.ui-dialog-overlay.open .ui-dialog-actions { opacity: 1; transform: none; transition-delay: 240ms; }
+
+.ui-dialog-icon {
+  width: 60px; height: 60px;
+  margin: 0 auto 16px;
+  border-radius: var(--radius-full);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--color-accent-light);
+  color: var(--color-accent-dark);
+}
+.ui-dialog-overlay.open .ui-dialog-icon svg { animation: uiIconPop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 160ms both; }
+@keyframes uiIconPop { from { transform: scale(0.4) rotate(-12deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.ui-dialog.tone-danger .ui-dialog-icon { background: var(--color-error-bg); color: var(--color-error); }
+.ui-dialog.tone-success .ui-dialog-icon { background: rgba(var(--color-accent-rgb), 0.14); color: var(--color-success); }
+.ui-dialog.tone-warning .ui-dialog-icon { background: rgba(var(--color-warning-rgb), 0.16); color: var(--color-warning); }
+
+.ui-dialog-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  line-height: 1.25;
+  margin-bottom: 8px;
+  color: var(--color-text);
+}
+.ui-dialog-message {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-md);
+}
+.ui-dialog-actions { display: flex; gap: 10px; }
+.ui-dialog-actions .ui-btn { flex: 1; }
+
+.ui-btn {
+  padding: 14px 16px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-main);
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+  outline: none;
+}
+.ui-btn:focus-visible { box-shadow: 0 0 0 3px rgba(var(--color-accent-rgb), 0.35); }
+.ui-btn-ghost {
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.ui-btn-primary { background: var(--color-accent-dark); color: var(--color-on-dark); }
+.ui-btn-danger  { background: var(--color-error); color: var(--color-on-dark); }
+
+/* ===================================================================
+   Admin modals (.modal-overlay) — animated instead of display:none
+   =================================================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-overlay);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 260ms var(--ease-smooth), visibility 0s linear 260ms;
+}
+.modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 260ms var(--ease-smooth), visibility 0s;
+}
+.modal-box {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  width: 560px;
+  max-width: calc(100vw - 32px);
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lifted);
+  opacity: 0;
+  transform: translateY(22px) scale(0.95);
+  transition: opacity 260ms var(--ease-smooth), transform 380ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.modal-overlay.show .modal-box { opacity: 1; transform: none; }
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  body, .ui-reveal, .ui-dialog, .ui-dialog-overlay, .modal-box, .modal-overlay,
+  .ui-dialog-icon, .ui-dialog-title, .ui-dialog-message, .ui-dialog-actions {
+    animation: none !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+  }
+  .ui-reveal { opacity: 1; transform: none; }
+}

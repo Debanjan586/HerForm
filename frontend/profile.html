@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>HERFORM — Profile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/variables.css" />
+<link rel="stylesheet" href="css/components.css" />
+<link rel="stylesheet" href="css/ui.css" />
+<script src="js/theme.js"></script>
+<script src="js/ui.js"></script>
+<style>
+  .toggle-row { display:flex; justify-content:space-between; align-items:center; padding: 12px 0; border-bottom: 1px solid var(--color-border); }
+  .toggle-row:last-child { border-bottom: none; }
+  .switch { position: relative; width: 46px; height: 26px; }
+  .switch input { opacity: 0; width:0; height:0; }
+  .slider { position:absolute; inset:0; background: var(--color-border); border-radius: var(--radius-full); transition: var(--transition-fast); cursor:pointer; }
+  .slider:before { content:""; position:absolute; width:20px; height:20px; left:3px; top:3px; background:#fff; border-radius:50%; transition: var(--transition-fast); }
+  input:checked + .slider { background: var(--color-sage-dark); }
+  input:checked + .slider:before { transform: translateX(20px); }
+</style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="top-bar"><div class="greeting" style="font-size:1.3rem;">Profile</div></div>
+    <div class="page" style="padding-top:0;" id="content"><div class="loading-spinner"></div></div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth-guard.js"></script>
+  <script src="js/bottom-nav.js"></script>
+  <script>
+    (async function init() {
+      const user = await requireUserAuth();
+      if (!user) return;
+
+      const content = document.getElementById('content');
+      content.innerHTML = `
+        <div class="card" style="text-align:center;">
+          <div class="avatar-btn" style="width:64px;height:64px;margin:0 auto 10px;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+          </div>
+          <div class="card-title" style="margin-bottom:2px;">${user.name}</div>
+          <div class="exercise-meta">${user.email}</div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Privacy & Activity Tracking</div>
+          <p class="exercise-meta" style="margin-bottom:10px;">
+            When enabled, your login times and workout session activity (start, last activity,
+            and approximate end) are visible to the administrator so your coach can see how your
+            programme is going. No health details, keystrokes, location, camera or microphone
+            data are ever collected. You can turn this off at any time.
+          </p>
+          <div class="toggle-row">
+            <span>Activity tracking</span>
+            <label class="switch">
+              <input type="checkbox" id="consentToggle" ${user.consent.activityTracking ? 'checked' : ''} />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Notifications</div>
+          <div class="toggle-row">
+            <span>Workout reminders</span>
+            <label class="switch">
+              <input type="checkbox" id="notifToggle" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <button class="btn btn-outline btn-full" id="logoutBtn" style="margin-top:8px;">Log Out</button>
+      `;
+
+      document.getElementById('consentToggle').addEventListener('change', async (e) => {
+        try {
+          await api.updateConsent(e.target.checked);
+          showToast(e.target.checked ? 'Activity tracking enabled' : 'Activity tracking disabled');
+          if (e.target.checked) window.location.reload();
+        } catch (err) {
+          ui.alert(err.message);
+          e.target.checked = !e.target.checked;
+        }
+      });
+
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        if (!(await ui.confirm({ title: 'Log out?', message: 'You will need to sign in again to continue your program.', confirmText: 'Log out', cancelText: 'Stay', tone: 'warning' }))) return;
+        try {
+          await api.logout();
+          ui.go('login.html');
+        } catch (err) {
+          ui.alert(err.message);
+        }
+      });
+
+      renderBottomNav('profile');
+    })();
+  </script>
+</body>
+</html>

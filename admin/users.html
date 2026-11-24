@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>HERFORM Admin — Users</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/variables.css" />
+<link rel="stylesheet" href="css/admin.css" />
+<link rel="stylesheet" href="css/ui.css" />
+<script src="js/theme.js"></script>
+<script src="js/ui.js"></script>
+<style>
+  .user-row { display:flex; align-items:center; gap:14px; padding:14px 16px; border:1px solid var(--color-border); border-radius: var(--radius-sm); margin-bottom:10px; flex-wrap: wrap; }
+  .user-avatar { width:40px; height:40px; border-radius:50%; background: var(--color-accent-light); color: var(--color-accent-dark); display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; }
+  .user-info { flex:1; min-width: 180px; }
+  .user-name { font-weight:700; }
+  .user-meta { font-size:0.8rem; color: var(--color-text-muted); }
+  .badge-off { background: var(--color-error-bg); color: var(--color-error); }
+  .row-actions { display:flex; gap:8px; flex-wrap:wrap; }
+  .pw-row { display:flex; gap:8px; }
+  .pw-row .form-input { flex:1; }
+  .hint { font-size:0.78rem; color: var(--color-text-muted); margin-top:4px; }
+</style>
+</head>
+<body>
+  <div class="admin-shell">
+    <div class="main-content">
+      <div class="page-header">
+        <h1>Users</h1>
+        <p>Nobody can sign up on their own. You create each account here, then give the person their email and password.</p>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <button class="btn btn-primary" id="addUserBtn">+ Create User</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><span>Accounts</span><span id="userCount" style="font-weight:500; color:var(--color-text-muted);"></span></div>
+        <div id="userList"><div class="loading-spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="userOverlay">
+    <div class="modal-box">
+      <h3 id="userModalTitle" style="margin-bottom:16px;">Create User</h3>
+      <form id="userForm" autocomplete="off">
+        <input type="hidden" id="userId" />
+        <div class="form-group">
+          <label class="form-label">Name</label>
+          <input class="form-input" id="userName" maxlength="80" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email (this is their login)</label>
+          <input class="form-input" type="email" id="userEmail" required autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="pwLabel">Password</label>
+          <div class="pw-row">
+            <input class="form-input" type="text" id="userPassword" autocomplete="new-password" />
+            <button type="button" class="btn btn-outline btn-sm" id="genPwBtn">Generate</button>
+          </div>
+          <div class="hint" id="pwHint">At least 8 characters. Copy it now and send it to the user — it can't be shown again later.</div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:18px;">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-outline" id="cancelUserBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth-guard.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    let users = [];
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+
+    (async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+      renderSidebar('users');
+      await load();
+    })();
+
+    async function load() {
+      try {
+        ({ users } = await api.getUsers());
+        render();
+      } catch (err) {
+        $('userList').innerHTML = `<div class="empty-state">Could not load users. ${esc(err.message)}</div>`;
+      }
+    }
+
+    function render() {
+      $('userCount').textContent = users.length ? `${users.length}` : '';
+      if (!users.length) {
+        $('userList').innerHTML = '<div class="empty-state">No users yet. Create the first one above.</div>';
+        return;
+      }
+      $('userList').innerHTML = users.map((u) => `
+        <div class="user-row">
+          <div class="user-avatar">${esc((u.name || u.email).charAt(0).toUpperCase())}</div>
+          <div class="user-info">
+            <div class="user-name">${esc(u.name)} ${u.disabled ? '<span class="badge badge-off">Disabled</span>' : ''}</div>
+            <div class="user-meta">${esc(u.email)} · ${u.completedDays} day${u.completedDays === 1 ? '' : 's'} completed</div>
+          </div>
+          <div class="row-actions">
+            <button class="btn btn-outline btn-sm" onclick="openModal('${u._id}')">Edit / Reset password</button>
+            <button class="btn btn-outline btn-sm" onclick="toggleDisabled('${u._id}')">${u.disabled ? 'Enable' : 'Disable'}</button>
+            <button class="btn btn-danger btn-sm" onclick="removeUser('${u._id}')">Delete</button>
+          </div>
+        </div>`).join('');
+    }
+
+    function randomPassword() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+      const buf = new Uint32Array(12);
+      crypto.getRandomValues(buf);
+      return Array.from(buf, (n) => chars[n % chars.length]).join('');
+    }
+    $('genPwBtn').addEventListener('click', () => { $('userPassword').value = randomPassword(); });
+
+    function openModal(id) {
+      const u = id ? users.find((x) => x._id === id) : null;
+      $('userModalTitle').textContent = u ? 'Edit User' : 'Create User';
+      $('userId').value = u ? u._id : '';
+      $('userName').value = u ? u.name : '';
+      $('userEmail').value = u ? u.email : '';
+      $('userPassword').value = u ? '' : randomPassword();
+      $('userPassword').required = !u;
+      $('pwLabel').textContent = u ? 'New password (leave empty to keep the current one)' : 'Password';
+      $('userOverlay').classList.add('show');
+    }
+    $('addUserBtn').addEventListener('click', () => openModal(null));
+    $('cancelUserBtn').addEventListener('click', () => $('userOverlay').classList.remove('show'));
+
+    $('userForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = $('userId').value;
+      const payload = { name: $('userName').value.trim(), email: $('userEmail').value.trim() };
+      const pw = $('userPassword').value;
+      if (pw) payload.password = pw;
+      try {
+        if (id) await api.updateUser(id, payload);
+        else await api.createUser({ ...payload, password: pw });
+        $('userOverlay').classList.remove('show');
+        await load();
+      } catch (err) {
+        ui.alert(err.message);
+      }
+    });
+
+    async function toggleDisabled(id) {
+      const u = users.find((x) => x._id === id);
+      const turningOff = !u.disabled;
+      const ok = await ui.confirm({
+        title: turningOff ? 'Disable this account?' : 'Enable this account?',
+        message: turningOff ? `${u.name} will be signed out and can't log in until you enable the account again. Progress is kept.` : `${u.name} will be able to log in again.`,
+        confirmText: turningOff ? 'Disable' : 'Enable',
+        tone: turningOff ? 'warning' : 'default'
+      });
+      if (!ok) return;
+      try { await api.updateUser(id, { disabled: turningOff }); await load(); } catch (err) { ui.alert(err.message); }
+    }
+
+    async function removeUser(id) {
+      const u = users.find((x) => x._id === id);
+      const ok = await ui.confirm({
+        title: 'Delete this user?',
+        message: `${u.name}'s account and ALL of their workout progress will be permanently deleted. This cannot be undone.`,
+        confirmText: 'Delete',
+        tone: 'danger'
+      });
+      if (!ok) return;
+      try { await api.deleteUser(id); await load(); } catch (err) { ui.alert(err.message); }
+    }
+  </script>
+</body>
+</html>

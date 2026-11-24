@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>HERFORM — Programme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/variables.css" />
+<link rel="stylesheet" href="css/components.css" />
+<link rel="stylesheet" href="css/ui.css" />
+<script src="js/theme.js"></script>
+<script src="js/ui.js"></script>
+<style>
+  .week-accordion { margin-bottom: var(--space-sm); }
+
+  /* Week = coloured header (accent), Days = normal surface rows */
+  .week-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px var(--space-md);
+    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-dark) 100%);
+    color: var(--color-on-dark);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-medium);
+    cursor: pointer;
+    user-select: none;
+    transition: transform 160ms var(--ease-smooth), border-radius 320ms var(--ease-smooth);
+  }
+  .week-header:active { transform: scale(0.98); }
+  .week-header-left { display: flex; align-items: center; gap: 14px; }
+  .week-badge {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-full);
+    background: var(--color-on-dark-subtle);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display);
+    font-size: 1.1rem; font-weight: 600;
+    color: var(--color-on-dark);
+  }
+  .week-title { font-weight: 700; font-size: 1rem; color: var(--color-on-dark); }
+  .week-header .day-sub { color: var(--color-on-dark-muted); margin-top: 2px; }
+  .chevron { color: var(--color-on-dark); transition: transform 420ms cubic-bezier(0.34, 1.4, 0.64, 1); }
+  .week-accordion.open .chevron { transform: rotate(180deg); }
+
+  /* Smooth height: grid row animates 0fr -> 1fr (works for any content height) */
+  .week-days {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 460ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .week-accordion.open .week-days { grid-template-rows: 1fr; }
+  .week-days-inner { overflow: hidden; min-height: 0; padding-top: 0; }
+  .week-days-inner > :first-child { margin-top: var(--space-xs); }
+
+  /* Each day slides/fades in one after another when its week opens */
+  .day-row {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    margin-top: 6px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 180ms var(--ease-smooth), transform 180ms var(--ease-smooth), background-color 200ms var(--ease-smooth);
+  }
+  .week-accordion.open .day-row {
+    opacity: 1;
+    transform: none;
+    transition: opacity 380ms var(--ease-smooth), transform 480ms cubic-bezier(0.22, 1, 0.36, 1), background-color 200ms var(--ease-smooth);
+    transition-delay: calc(var(--i, 0) * 55ms + 140ms);
+  }
+  .week-accordion.open .day-row:active { transform: scale(0.98); transition-delay: 0ms; }
+  .day-row.rest { background: var(--color-surface-alt); }
+  .day-row.rest .day-label { color: var(--color-text-muted); }
+  .day-num {
+    width: 34px; height: 34px; flex-shrink: 0;
+    border-radius: var(--radius-full);
+    background: var(--color-accent-light);
+    color: var(--color-accent-dark);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; font-weight: 700;
+  }
+  .day-row-main { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .day-label { font-weight: 600; font-size: 0.9rem; }
+  .day-sub { font-size: 0.78rem; color: var(--color-text-muted); }
+  .day-row > svg { color: var(--color-text-muted); flex-shrink: 0; }
+  .day-row.locked { opacity: 0.55; cursor: pointer; background: var(--color-surface-alt); }
+  .week-accordion.open .day-row.locked { opacity: 0.55; }
+  .day-row.current {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(var(--color-accent-rgb), 0.18);
+  }
+  .day-row.current .day-num { background: var(--color-accent); color: var(--color-on-dark); }
+  .day-row.shake { animation: lockShake 420ms var(--ease-smooth); }
+  @keyframes lockShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(3px); }
+  }
+  /* Completed day: still can't be reopened, but clearly marked done */
+  .day-row.locked.done,
+  .week-accordion.open .day-row.locked.done {
+    opacity: 1;
+    cursor: pointer;
+    background: var(--color-surface);
+    border-color: color-mix(in srgb, var(--color-success) 45%, var(--color-border));
+  }
+  .day-row.done .day-num { background: color-mix(in srgb, var(--color-success) 18%, transparent); color: var(--color-success); }
+  .day-tick {
+    width: 26px; height: 26px; flex-shrink: 0;
+    border-radius: var(--radius-full);
+    background: var(--color-success);
+    color: var(--color-on-dark);
+    display: flex; align-items: center; justify-content: center;
+    transform: scale(0);
+  }
+  /* tick pops in after its row has slid in */
+  .week-accordion.open .day-tick {
+    animation: tickPop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation-delay: calc(var(--i, 0) * 55ms + 420ms);
+  }
+  @keyframes tickPop {
+    from { transform: scale(0) rotate(-40deg); }
+    to   { transform: scale(1) rotate(0deg); }
+  }
+  .day-tick svg path { stroke-dasharray: 24; stroke-dashoffset: 24; }
+  .week-accordion.open .day-tick svg path {
+    animation: tickDraw 420ms var(--ease-smooth) both;
+    animation-delay: calc(var(--i, 0) * 55ms + 620ms);
+  }
+  @keyframes tickDraw { to { stroke-dashoffset: 0; } }
+</style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="top-bar">
+      <div class="greeting" style="font-size:1.3rem;">12-Week Programme</div>
+    </div>
+    <div class="page" style="padding-top:0;" id="weeksContainer">
+      <div class="loading-spinner"></div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth-guard.js"></script>
+  <script src="js/day-lock.js"></script>
+  <script src="js/bottom-nav.js"></script>
+  <script>
+    (async function init() {
+      const user = await requireUserAuth();
+      if (!user) return;
+
+      const container = document.getElementById('weeksContainer');
+      try {
+        const { workouts } = await api.getWorkouts();
+        const summary = await api.getProgressSummary();
+        const currentDay = pickCurrentWorkout(workouts, summary.calendar)?.day ?? null;
+        const doneDays = new Set(summary.calendar.filter((c) => c.completed).map((c) => c.day));
+        const byWeek = {};
+        workouts.forEach((w) => {
+          byWeek[w.week] = byWeek[w.week] || [];
+          byWeek[w.week].push(w);
+        });
+
+        container.innerHTML = Object.keys(byWeek)
+          .map((week) => {
+            const days = byWeek[week];
+            return `
+              <div class="week-accordion" id="week-${week}">
+                <div class="week-header" onclick="toggleWeek(${week})">
+                  <div class="week-header-left">
+                    <div class="week-badge">${week}</div>
+                    <div>
+                      <div class="week-title">Week ${week}</div>
+                      <div class="day-sub">${days.filter((d) => doneDays.has(d.day)).length ? `${days.filter((d) => doneDays.has(d.day)).length} of ${days.length} done` : `${days.length} days`}</div>
+                    </div>
+                  </div>
+                  <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+                <div class="week-days">
+                  <div class="week-days-inner">
+                  ${days
+                    .map(
+                      (d, i) => `
+                    ${
+                      d.day === currentDay
+                        ? `<a href="workout-day.html?day=${d.day}" class="day-row current ${d.isRestDay ? 'rest' : ''}" style="--i:${i}">`
+                        : `<div class="day-row locked ${doneDays.has(d.day) ? 'done' : ''}" data-day="${d.day}" data-state="${doneDays.has(d.day) ? 'done' : 'locked'}" style="--i:${i}" role="button" tabindex="0">`
+                    }
+                      <div class="day-row-main">
+                        <div class="day-num">${d.day}</div>
+                        <div>
+                          <div class="day-label">${d.dayOfWeek} · ${d.title}</div>
+                          <div class="day-sub">${d.day === currentDay ? 'Today · ' : doneDays.has(d.day) ? 'Completed · ' : ''}${d.isRestDay ? 'Rest day' : `${d.exercises.length} exercises`}</div>
+                        </div>
+                      </div>
+                      ${
+                        d.day === currentDay
+                          ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`
+                          : doneDays.has(d.day)
+                            ? `<span class="day-tick" title="Completed"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>`
+                            : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`
+                      }
+                    ${d.day === currentDay ? '</a>' : '</div>'}`
+                    )
+                    .join('')}
+                  </div>
+                </div>
+              </div>`;
+          })
+          .join('');
+
+        renderBottomNav('program');
+
+        // Open week 1 a moment after render so it animates open too.
+        const curWorkout = workouts.find((w) => w.day === currentDay);
+        const first = document.getElementById(`week-${curWorkout ? curWorkout.week : 1}`);
+        if (first) setTimeout(() => first.classList.add('open'), 450);
+
+        // Tapping a non-current day: done -> "restart?" dialog, locked -> "do today first" dialog.
+        const activate = async (row) => {
+          const dayNum = Number(row.dataset.day);
+          if (row.dataset.state === 'done') {
+            const restart = await ui.confirm({
+              title: 'Day ' + dayNum + ' already done',
+              message: 'You have already completed this day. Do you want to restart it?',
+              confirmText: 'Yes, restart',
+              cancelText: 'No, close',
+              tone: 'success',
+              defaultFocus: 'cancel'
+            });
+            if (restart) ui.go('workout-day.html?day=' + dayNum);
+            return;
+          }
+          row.classList.remove('shake');
+          void row.offsetWidth;
+          row.classList.add('shake');
+          const goToday = await ui.confirm({
+            title: 'Day ' + dayNum + ' is locked',
+            message: currentDay
+              ? "Clear today's workout first (Day " + currentDay + ') to unlock this day.'
+              : 'Finish your current workout first to unlock this day.',
+            confirmText: "Go to today's workout",
+            cancelText: 'Close',
+            tone: 'warning',
+            defaultFocus: 'cancel'
+          });
+          if (goToday && currentDay) ui.go('workout-day.html?day=' + currentDay);
+        };
+        container.addEventListener('click', (e) => {
+          const row = e.target.closest('.day-row[data-state]');
+          if (row) activate(row);
+        });
+        container.addEventListener('keydown', (e) => {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          const row = e.target.closest('.day-row[data-state]');
+          if (row) { e.preventDefault(); activate(row); }
+        });
+      } catch (err) {
+        container.innerHTML = `<div class="error-state">Could not load programme. ${err.message}</div>`;
+      }
+    })();
+
+    function toggleWeek(week) {
+      document.getElementById(`week-${week}`).classList.toggle('open');
+    }
+  </script>
+</body>
+</html>
