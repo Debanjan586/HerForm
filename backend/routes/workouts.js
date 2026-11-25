@@ -1,7 +1,7 @@
 const express = require('express');
 const Workout = require('../models/Workout');
 const Exercise = require('../models/Exercise');
-const { requireUserAuth, requireAdminAuthCookie } = require('../middleware/auth');
+const { requireUserAuth, requireAdminAuthCookie, requireUserOrAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -44,7 +44,7 @@ function buildEntry(libraryExercise, overrides, order) {
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // GET /api/workouts — full 12-week programme (populated with library exercise details)
-router.get('/', requireUserAuth, async (req, res) => {
+router.get('/', requireUserOrAdmin, async (req, res) => {
   try {
     const workouts = await Workout.find().sort({ day: 1 }).populate('exercises.exercise');
     res.json({ workouts });
@@ -54,7 +54,7 @@ router.get('/', requireUserAuth, async (req, res) => {
 });
 
 // GET /api/workouts/day/:day — single day's workout, with exercises populated
-router.get('/day/:day', requireUserAuth, async (req, res) => {
+router.get('/day/:day', requireUserOrAdmin, async (req, res) => {
   try {
     const dayNum = Number(req.params.day);
     if (!Number.isInteger(dayNum) || dayNum < 1 || dayNum > 84) {

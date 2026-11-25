@@ -59,6 +59,13 @@ async function requireAdminAuthCookie(req, res, next) {
   return verifyAndAttach(token, req, res, next, 'admin');
 }
 
+// For read-only routes used by BOTH apps (e.g. listing workouts): accepts a
+// valid user cookie (role user) or a valid admin cookie (role admin).
+async function requireUserOrAdmin(req, res, next) {
+  if (req.cookies[USER_COOKIE_NAME]) return verifyAndAttach(req.cookies[USER_COOKIE_NAME], req, res, next, 'user');
+  return verifyAndAttach(req.cookies[ADMIN_COOKIE_NAME], req, res, next, 'admin');
+}
+
 // Requires req.user.role === 'admin' (use AFTER requireAuth)
 function requireAdmin(req, res, next) {
   if (!req.user || req.user.role !== 'admin') {
@@ -71,6 +78,7 @@ module.exports = {
   requireAuth,
   requireUserAuth,
   requireAdminAuthCookie,
+  requireUserOrAdmin,
   requireAdmin,
   USER_COOKIE_NAME,
   ADMIN_COOKIE_NAME
